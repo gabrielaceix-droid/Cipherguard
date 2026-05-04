@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}CipherGuard Academy{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+
+  <style>
+    :root {
+      --green:       #00ff88;
+      --green-dim:   #00cc6a;
+      --green-glow:  rgba(0,255,136,0.15);
+      --green-faint: rgba(0,255,136,0.05);
+      --dark:        #020b06;
+      --dark2:       #061009;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--dark);
+      color: #c8ffe0;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── MATRIX ── */
+    #matrix-canvas {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0; opacity: 0.18;
+      pointer-events: none;
+    }
+    .scanlines {
+      position: fixed; inset: 0; z-index: 1;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(2,11,6,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(0,255,136,0.15);
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+    }
+    .nav-brand {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.95rem; font-weight: 900;
+      color: var(--green); text-decoration: none;
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .brand-icon {
+      width: 30px; height: 30px;
+      background: rgba(0,255,136,0.12);
+      border: 1px solid rgba(0,255,136,0.3);
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--green);
+    }
+    .nav-links { display: flex; gap: 2px; list-style: none; }
+    .nav-links a {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.68rem; letter-spacing: 0.08em;
+      color: rgba(200,255,224,0.45);
+      text-decoration: none; text-transform: uppercase;
+      padding: 5px 12px; border-radius: 3px;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--green);
+      background: rgba(0,255,136,0.07);
+    }
+
+    main { position: relative; z-index: 2; max-width: 1080px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+
+    footer {
+      position: relative; z-index: 2;
+      border-top: 1px solid rgba(0,255,136,0.1);
+      padding: 1.2rem 2rem; text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.62rem; color: rgba(0,255,136,0.25);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── ANIMACIONES ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes blink  { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+    @keyframes glow-pulse {
+      0%,100% { text-shadow: 0 0 20px rgba(0,255,136,0.4), 0 0 40px rgba(0,255,136,0.15); }
+      50%      { text-shadow: 0 0 40px rgba(0,255,136,0.7), 0 0 80px rgba(0,255,136,0.3); }
+    }
+    .fade-up  { animation: fadeUp 0.55s ease both; }
+    .delay-1  { animation-delay: 0.08s; }
+    .delay-2  { animation-delay: 0.16s; }
+    .delay-3  { animation-delay: 0.24s; }
+    .delay-4  { animation-delay: 0.32s; }
+
+    /* ── CYBER DIVIDER (igual al index) ── */
+    .cyber-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 2rem 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem; color: rgba(0,255,136,0.3);
+    }
+    .cyber-divider::before, .cyber-divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,136,0.2));
+    }
+    .cyber-divider::after { background: linear-gradient(90deg, rgba(0,255,136,0.2), transparent); }
+
+    /* ── CARD (igual bracket style que módulos del index) ── */
+    .cyber-card {
+      background: rgba(0,255,136,0.03);
+      border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 4px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .cyber-card::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 20px; height: 20px;
+      border-top: 2px solid var(--green); border-left: 2px solid var(--green);
+      opacity: 0.4; transition: opacity 0.3s;
+    }
+    .cyber-card::after {
+      content: ''; position: absolute; bottom: 0; right: 0;
+      width: 20px; height: 20px;
+      border-bottom: 2px solid var(--green); border-right: 2px solid var(--green);
+      opacity: 0.4; transition: opacity 0.3s;
+    }
+    .cyber-card:hover {
+      border-color: rgba(0,255,136,0.5);
+      background: rgba(0,255,136,0.06);
+      box-shadow: 0 0 30px rgba(0,255,136,0.08);
+    }
+    .cyber-card:hover::before, .cyber-card:hover::after { opacity: 1; }
+
+    /* ── SECTION INTRO ── */
+    .section-intro { margin-bottom: 1.5rem; }
+    .section-intro .eyebrow {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem; letter-spacing: 0.2em;
+      color: rgba(0,255,136,0.5); text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+    .section-intro h2 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.2rem; font-weight: 700;
+      color: #e0fff0; letter-spacing: 0.04em;
+    }
+
+    /* ── CODE BLOCK ── */
+    .code-block {
+      background: #010d05;
+      border: 1px solid rgba(0,255,136,0.15);
+      border-radius: 3px;
+      padding: 1rem 1.3rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--green);
+      position: relative; overflow-x: auto; line-height: 1.85;
+    }
+    .code-block .cm  { color: rgba(200,255,224,0.25); }
+    .code-block .cmd { color: #00ffcc; }
+    .code-block .flg { color: rgba(0,255,136,0.65); }
+    .code-block .val { color: #ffe066; }
+    .copy-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: rgba(0,255,136,0.07);
+      border: 1px solid rgba(0,255,136,0.2);
+      color: var(--green);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.58rem; padding: 2px 8px; border-radius: 2px;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.06em;
+    }
+    .copy-btn:hover { background: rgba(0,255,136,0.18); }
+
+    /* ── INFO BOX ── */
+    .info-box {
+      border-radius: 3px; padding: 0.9rem 1.2rem;
+      margin: 0.75rem 0; display: flex; gap: 10px;
+      align-items: flex-start; font-size: 0.84rem;
+      font-family: 'Rajdhani', sans-serif; line-height: 1.6;
+    }
+    .info-box.tip    { background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); }
+    .info-box.warn   { background: rgba(255,190,0,0.05); border: 1px solid rgba(255,190,0,0.2); }
+    .info-box.danger { background: rgba(255,70,70,0.05); border: 1px solid rgba(255,70,70,0.18); }
+    .info-box.tip  i { color: var(--green); }
+    .info-box.warn i { color: #ffbf00; }
+    .info-box.danger i { color: #ff5555; }
+    .info-box i { font-size: 1rem; margin-top: 2px; flex-shrink: 0; }
+
+    /* ── TERMINAL ── */
+    .terminal-wrapper {
+      border-radius: 6px; overflow: hidden;
+      border: 1px solid rgba(0,255,136,0.25);
+      box-shadow: 0 0 40px rgba(0,0,0,0.7);
+    }
+    .t-bar {
+      background: #0d1a10; padding: 9px 14px;
+      display: flex; align-items: center; gap: 7px;
+      border-bottom: 1px solid rgba(0,255,136,0.1);
+    }
+    .t-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .t-r { background: #ff5f57; }
+    .t-y { background: #febc2e; }
+    .t-g { background: #28c840; }
+    .t-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem; color: rgba(200,255,224,0.3);
+      margin-left: 8px; flex: 1; text-align: center; letter-spacing: 0.06em;
+    }
+    .t-body {
+      background: #010d05; padding: 1.1rem 1.4rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      min-height: 200px; max-height: 400px;
+      overflow-y: auto; line-height: 1.85;
+    }
+    .t-line   { color: rgba(200,255,224,0.75); margin: 1px 0; }
+    .t-prompt { color: var(--green); font-weight: 700; }
+    .t-out    { color: rgba(200,255,224,0.4); }
+    .t-ok     { color: #00ff88; }
+    .t-err    { color: #ff5555; }
+    .t-hint   { color: #ffe066; }
+    .t-info   { color: #00ccff; }
+    .t-step-bar {
+      display: flex; gap: 5px; padding: 7px 14px;
+      background: #0a1a0d;
+      border-top: 1px solid rgba(0,255,136,0.08);
+      align-items: center;
+    }
+    .s-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); transition: background 0.3s;
+    }
+    .s-dot.done   { background: #00a854; }
+    .s-dot.active { background: var(--green); box-shadow: 0 0 5px var(--green); }
+    .s-lbl { font-size: 0.58rem; color: rgba(200,255,224,0.2); margin-left: auto; font-family: 'Share Tech Mono', monospace; }
+    .t-footer {
+      background: #0a1a0d; padding: 0.6rem 1.2rem;
+      border-top: 1px solid rgba(0,255,136,0.08);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .t-input {
+      background: transparent; border: none; outline: none;
+      color: rgba(200,255,224,0.9);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem; flex: 1; caret-color: var(--green);
+    }
+    /* Botón igual al mod-btn del index (fill slide) */
+    .t-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem; font-weight: 700;
+      padding: 5px 12px; border-radius: 3px;
+      cursor: pointer; transition: all 0.25s;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      position: relative; overflow: hidden;
+    }
+    .t-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--green);
+      transform: translateX(-101%); transition: transform 0.25s ease; z-index: 0;
+    }
+    .t-btn:hover::before { transform: translateX(0); }
+    .t-btn:hover { color: #020b06; box-shadow: 0 0 12px rgba(0,255,136,0.3); }
+    .t-btn span { position: relative; z-index: 1; }
+    .t-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .t-btn:disabled::before { display: none; }
+    .t-btn:disabled:hover { color: var(--green); box-shadow: none; }
+
+    @media(max-width:768px){ .nav-links{display:none;} main{padding:1.5rem 1rem 4rem;} }
+  </style>
+
+  {% block extra_styles %}{% endblock %}
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+<div class="scanlines"></div>
+
+<nav class="navbar">
+  <a href="/" class="nav-brand">
+    <span class="brand-icon"><i class="bi bi-shield-lock-fill"></i></span>
+    CIPHERGUARD
+  </a>
+  <ul class="nav-links">
+    <li><a href="/"        {% if request.endpoint=='index'   %}class="active"{% endif %}>inicio</a></li>
+    <li><a href="/modulo1" {% if request.endpoint=='modulo1' %}class="active"{% endif %}>módulo_01</a></li>
+    <li><a href="/modulo2" {% if request.endpoint=='modulo2' %}class="active"{% endif %}>módulo_02</a></li>
+    <li><a href="/modulo3" {% if request.endpoint=='modulo3' %}class="active"{% endif %}>módulo_03</a></li>
+    <li><a href="/modulo4" {% if request.endpoint=='modulo4' %}class="active"{% endif %}>módulo_04</a></li>
+  </ul>
+</nav>
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer>CIPHERGUARD ACADEMY &nbsp;·&nbsp; SEGURIDAD DE LA INFORMACIÓN &nbsp;·&nbsp; {{ now.year if now else '2026' }}</footer>
+
+<script>
+(function(){
+  const c = document.getElementById('matrix-canvas');
+  const ctx = c.getContext('2d');
+  let W, H, cols, drops;
+  const chars = '01アイウエオカキクABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&><{}[]';
+  function init(){
+    W = c.width = window.innerWidth;
+    H = c.height = window.innerHeight;
+    cols = Math.floor(W / 18);
+    drops = Array(cols).fill(0).map(() => Math.random() * -60);
+  }
+  function draw(){
+    ctx.fillStyle = 'rgba(2,11,6,0.05)'; ctx.fillRect(0,0,W,H);
+    ctx.font = '13px "Share Tech Mono",monospace';
+    for(let i=0;i<cols;i++){
+      const ch = chars[Math.floor(Math.random()*chars.length)];
+      const x = i*18, y = drops[i]*18;
+      ctx.fillStyle = 'rgba(0,255,136,0.85)'; ctx.fillText(ch,x,y);
+      if(y>20){ ctx.fillStyle='rgba(0,180,90,0.3)'; ctx.fillText(chars[Math.floor(Math.random()*chars.length)],x,y-18); }
+      if(y>H && Math.random()>0.975) drops[i]=0;
+      drops[i]+=0.45;
+    }
+  }
+  init(); setInterval(draw,50); window.addEventListener('resize',init);
+})();
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
