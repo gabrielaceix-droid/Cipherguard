@@ -1,0 +1,651 @@
+{% extends "base.html" %}
+{% block title %}Módulo 03 — Prevención de Filtración de Datos{% endblock %}
+
+{% block extra_styles %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap');
+  :root{--green:#00ff88;--green-dim:#00cc6a;--green-glow:rgba(0,255,136,0.15);--green-faint:rgba(0,255,136,0.05);--dark:#020b06;--dark2:#061009;}
+  body{background:var(--dark)!important;color:#c8ffe0!important;overflow-x:hidden;}
+  body::after,body::before{display:none;}
+  #matrix-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.18;pointer-events:none;}
+  .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);}
+  .navbar{background:rgba(2,11,6,0.92)!important;border-bottom:1px solid rgba(0,255,136,0.15)!important;z-index:100;}
+  .nav-brand{font-family:'Orbitron',monospace!important;font-size:0.95rem!important;color:var(--green)!important;letter-spacing:0.08em!important;}
+  .nav-brand .brand-icon{background:rgba(0,255,136,0.12)!important;color:var(--green)!important;border:1px solid rgba(0,255,136,0.3)!important;}
+  .nav-links a{font-family:'Share Tech Mono',monospace!important;color:rgba(200,255,224,0.45)!important;font-size:0.75rem!important;letter-spacing:0.06em!important;}
+  .nav-links a:hover,.nav-links a.active{color:var(--green)!important;background:rgba(0,255,136,0.07)!important;}
+  main{position:relative;z-index:2;}
+  footer{position:relative;z-index:2;border-top:1px solid rgba(0,255,136,0.1)!important;font-family:'Share Tech Mono',monospace!important;color:rgba(0,255,136,0.25)!important;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+  @keyframes glow-pulse{0%,100%{text-shadow:0 0 20px rgba(0,255,136,0.4),0 0 40px rgba(0,255,136,0.15);}50%{text-shadow:0 0 40px rgba(0,255,136,0.7),0 0 80px rgba(0,255,136,0.3);}}
+  .fade-up{animation:fadeUp 0.55s ease both;}
+  .delay-1{animation-delay:0.08s;}.delay-2{animation-delay:0.16s;}.delay-3{animation-delay:0.24s;}
+  .cyber-divider{display:flex;align-items:center;gap:12px;margin:2.5rem 0;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:rgba(0,255,136,0.3);}
+  .cyber-divider::before,.cyber-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,255,136,0.2));}
+  .cyber-divider::after{background:linear-gradient(90deg,rgba(0,255,136,0.2),transparent);}
+  .section-intro{margin-bottom:1.75rem;}
+  .section-intro .eyebrow{font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;color:rgba(0,255,136,0.5);text-transform:uppercase;margin-bottom:0.3rem;}
+  .section-intro h2{font-family:'Orbitron',monospace;font-size:1.2rem;font-weight:700;color:#e0fff0;letter-spacing:0.04em;}
+  .mod-hero{padding:3.5rem 0 2.5rem;border-bottom:1px solid rgba(0,255,136,0.12);margin-bottom:2.5rem;}
+  .mod-hero .eyebrow{font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.28em;color:rgba(0,255,136,0.5);text-transform:uppercase;display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+  .mod-hero .eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,255,136,0.2),transparent);}
+  .mod-hero h1{font-family:'Orbitron',monospace;font-weight:900;font-size:clamp(1.8rem,5vw,3.2rem);line-height:1.05;color:#fff;letter-spacing:0.01em;margin-bottom:0.5rem;}
+  .mod-hero h1 .glow{color:var(--green);animation:glow-pulse 3s ease-in-out infinite;}
+  .mod-hero .sub{font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:rgba(200,255,224,0.42);letter-spacing:0.04em;margin-top:0.5rem;}
+  .status-bar{display:inline-flex;align-items:center;gap:16px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:7px 18px;margin-top:1.5rem;font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:rgba(0,255,136,0.5);}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 1.2s ease-in-out infinite;flex-shrink:0;}
+  .learn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.65rem;margin-bottom:2.5rem;}
+  .learn-item{display:flex;align-items:flex-start;gap:10px;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.12);border-radius:4px;padding:0.85rem 1rem;font-family:'Rajdhani',sans-serif;font-size:0.9rem;color:rgba(200,255,224,0.5);transition:all 0.25s;position:relative;overflow:hidden;}
+  .learn-item::before{content:'';position:absolute;top:0;left:0;width:14px;height:14px;border-top:1px solid var(--green);border-left:1px solid var(--green);opacity:0.35;}
+  .learn-item:hover{border-color:rgba(0,255,136,0.4);color:#c8ffe0;background:rgba(0,255,136,0.06);}
+  .learn-item i{color:var(--green);font-size:1rem;margin-top:2px;flex-shrink:0;}
+  .mod-card{background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:1.75rem;position:relative;overflow:hidden;transition:all 0.3s ease;}
+  .mod-card::before{content:'';position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid var(--green);border-left:2px solid var(--green);opacity:0.4;transition:opacity 0.3s;}
+  .mod-card::after{content:'';position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2px solid var(--green);border-right:2px solid var(--green);opacity:0.4;transition:opacity 0.3s;}
+  .mod-card:hover{border-color:rgba(0,255,136,0.5);background:rgba(0,255,136,0.06);box-shadow:0 0 30px rgba(0,255,136,0.08);}
+  .mod-card:hover::before,.mod-card:hover::after{opacity:1;}
+  .info-box{border-radius:3px;padding:0.9rem 1.2rem;margin:0.75rem 0;display:flex;gap:10px;align-items:flex-start;font-family:'Rajdhani',sans-serif;font-size:0.88rem;line-height:1.6;}
+  .info-box.tip{background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);}
+  .info-box.warn{background:rgba(255,190,0,0.05);border:1px solid rgba(255,190,0,0.2);}
+  .info-box.danger{background:rgba(255,70,70,0.05);border:1px solid rgba(255,70,70,0.18);}
+  .info-box.tip i{color:var(--green);}.info-box.warn i{color:#ffbf00;}.info-box.danger i{color:#ff5555;}
+  .info-box i{font-size:1rem;margin-top:2px;flex-shrink:0;}
+  .flip-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:1rem;margin-bottom:1.5rem;}
+  .flip-card{height:210px;perspective:900px;cursor:pointer;}
+  .flip-inner{position:relative;width:100%;height:100%;transition:transform 0.6s cubic-bezier(0.4,0.2,0.2,1);transform-style:preserve-3d;}
+  .flip-card.flipped .flip-inner{transform:rotateY(180deg);}
+  .flip-front,.flip-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:4px;padding:1.1rem;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(0,255,136,0.15);}
+  .flip-front{background:rgba(0,255,136,0.03);}
+  .flip-back{background:rgba(0,255,136,0.07);transform:rotateY(180deg);border-color:rgba(0,255,136,0.3);}
+  .flip-front::before,.flip-back::before{content:'';position:absolute;top:0;left:0;width:12px;height:12px;border-top:1px solid var(--green);border-left:1px solid var(--green);opacity:0.5;}
+  .flip-front::after,.flip-back::after{content:'';position:absolute;bottom:0;right:0;width:12px;height:12px;border-bottom:1px solid var(--green);border-right:1px solid var(--green);opacity:0.5;}
+  .f-tag{font-family:'Share Tech Mono',monospace;font-size:0.54rem;color:rgba(0,255,136,0.45);letter-spacing:0.1em;}
+  .f-icon{font-size:1.4rem;color:var(--green);opacity:0.8;}
+  .f-title{font-family:'Orbitron',monospace;font-size:0.68rem;font-weight:700;color:#e0fff0;line-height:1.3;}
+  .f-hint{font-family:'Share Tech Mono',monospace;font-size:0.52rem;color:rgba(200,255,224,0.2);}
+  .b-def{font-family:'Rajdhani',sans-serif;font-size:0.82rem;color:rgba(200,255,224,0.7);line-height:1.55;flex:1;}
+  .b-note{font-family:'Share Tech Mono',monospace;font-size:0.58rem;color:var(--green);border-top:1px solid rgba(0,255,136,0.15);padding-top:0.45rem;margin-top:0.45rem;}
+  .estados-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+  @media(max-width:620px){.estados-grid{grid-template-columns:1fr;}}
+  .estado-card{background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:1.4rem;position:relative;overflow:hidden;transition:all 0.3s;}
+  .estado-card::before{content:'';position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid var(--green);border-left:2px solid var(--green);opacity:0.3;transition:opacity 0.3s;}
+  .estado-card::after{content:'';position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2px solid var(--green);border-right:2px solid var(--green);opacity:0.3;transition:opacity 0.3s;}
+  .estado-card:hover{border-color:rgba(0,255,136,0.45);background:rgba(0,255,136,0.07);transform:translateY(-2px);}
+  .estado-card:hover::before,.estado-card:hover::after{opacity:1;}
+  .estado-icon{font-size:1.6rem;margin-bottom:0.4rem;}
+  .estado-title{font-family:'Orbitron',monospace;font-size:0.68rem;font-weight:700;color:var(--green);margin-bottom:0.4rem;letter-spacing:0.05em;}
+  .estado-desc{font-family:'Rajdhani',sans-serif;font-size:0.82rem;color:rgba(200,255,224,0.5);line-height:1.55;}
+  .estado-cmd{font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,200,0.55);margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid rgba(0,255,136,0.1);}
+  .code-block{background:#010d05;border:1px solid rgba(0,255,136,0.15);border-radius:3px;padding:1rem 1.3rem;font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green);position:relative;overflow-x:auto;line-height:1.85;}
+  .code-block .cm{color:rgba(200,255,224,0.22);}.code-block .cmd{color:#00ffcc;}.code-block .flg{color:rgba(0,255,136,0.65);}.code-block .val{color:#ffe066;}
+  .copy-btn{position:absolute;top:0.5rem;right:0.5rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);color:var(--green);font-family:'Share Tech Mono',monospace;font-size:0.58rem;padding:2px 8px;border-radius:2px;cursor:pointer;transition:all 0.2s;}
+  .copy-btn:hover{background:rgba(0,255,136,0.18);}
+  .cia-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:1.5rem;}
+  @media(max-width:580px){.cia-mini{grid-template-columns:1fr;}}
+  .cia-mini-card{background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:1.1rem;position:relative;overflow:hidden;}
+  .cia-mini-card::before{content:'';position:absolute;top:0;left:0;width:14px;height:14px;border-top:1px solid var(--green);border-left:1px solid var(--green);opacity:0.4;}
+  .cia-mini-letter{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:900;color:var(--green);line-height:1;animation:glow-pulse 3s ease-in-out infinite;}
+  .cia-mini-word{font-family:'Orbitron',monospace;font-size:0.58rem;letter-spacing:0.08em;color:rgba(200,255,224,0.5);margin-bottom:0.5rem;}
+  .cia-mini-desc{font-family:'Rajdhani',sans-serif;font-size:0.82rem;color:rgba(200,255,224,0.5);line-height:1.5;}
+  .conclusion{background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.2);border-radius:4px;padding:1.75rem;margin-top:3rem;position:relative;overflow:hidden;}
+  .conclusion::before{content:'';position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid var(--green);border-left:2px solid var(--green);opacity:0.5;}
+  .conclusion::after{content:'';position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2px solid var(--green);border-right:2px solid var(--green);opacity:0.5;}
+  .conclusion h3{font-family:'Orbitron',monospace;font-size:0.82rem;font-weight:700;color:var(--green);margin-bottom:1rem;letter-spacing:0.06em;}
+  .conclusion ul{list-style:none;display:flex;flex-direction:column;gap:0.45rem;}
+  .conclusion li{font-family:'Rajdhani',sans-serif;font-size:0.9rem;color:rgba(200,255,224,0.55);padding-left:1.4rem;position:relative;}
+  .conclusion li::before{content:'→';position:absolute;left:0;color:var(--green);font-family:'Share Tech Mono',monospace;}
+  .terminal-wrapper{border-radius:4px;overflow:hidden;border:1px solid rgba(0,255,136,0.25);box-shadow:0 0 40px rgba(0,0,0,0.7);margin-bottom:1.5rem;}
+  .t-bar{background:#0d1a10;padding:9px 14px;display:flex;align-items:center;gap:7px;border-bottom:1px solid rgba(0,255,136,0.1);}
+  .t-dot{width:11px;height:11px;border-radius:50%;}.t-r{background:#ff5f57;}.t-y{background:#febc2e;}.t-g{background:#28c840;}
+  .t-title{font-family:'Share Tech Mono',monospace;font-size:0.63rem;color:rgba(200,255,224,0.28);margin-left:8px;flex:1;text-align:center;letter-spacing:0.06em;}
+  .t-body{background:#010d05;padding:1.1rem 1.4rem;font-family:'Share Tech Mono',monospace;font-size:0.78rem;min-height:200px;max-height:420px;overflow-y:auto;line-height:1.85;}
+  .t-line{color:rgba(200,255,224,0.72);margin:1px 0;}.t-prompt{color:var(--green);font-weight:700;}.t-out{color:rgba(200,255,224,0.38);}.t-ok{color:#00ff88;}.t-err{color:#ff5555;}.t-hint{color:#ffe066;}.t-info{color:#00ccff;}
+  .t-step-bar{display:flex;gap:5px;padding:7px 14px;background:#0a1a0d;border-top:1px solid rgba(0,255,136,0.08);align-items:center;}
+  .s-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.07);transition:background 0.3s;}
+  .s-dot.done{background:#00a854;}.s-dot.active{background:var(--green);box-shadow:0 0 5px var(--green);}
+  .s-lbl{font-size:0.56rem;color:rgba(200,255,224,0.18);margin-left:auto;font-family:'Share Tech Mono',monospace;}
+  .t-footer{background:#0a1a0d;padding:0.6rem 1.2rem;border-top:1px solid rgba(0,255,136,0.08);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .t-btn{display:inline-flex;align-items:center;gap:5px;background:transparent;border:1px solid var(--green);color:var(--green);font-family:'Orbitron',monospace;font-weight:700;font-size:0.6rem;letter-spacing:0.08em;padding:6px 14px;border-radius:3px;text-transform:uppercase;cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;}
+  .t-btn::before{content:'';position:absolute;inset:0;background:var(--green);transform:translateX(-101%);transition:transform 0.3s ease;z-index:0;}
+  .t-btn:hover::before{transform:translateX(0);}
+  .t-btn:hover{color:#020b06;box-shadow:0 0 20px rgba(0,255,136,0.3);}
+  .t-btn span{position:relative;z-index:1;}
+  .t-btn:disabled{opacity:0.3;cursor:not-allowed;}.t-btn:disabled::before{display:none;}.t-btn:disabled:hover{color:var(--green);box-shadow:none;}
+/* MATCH */
+  .match-wrap{background:rgba(0,255,136,0.02);border:1px solid rgba(0,255,136,0.15);border-radius:4px;padding:1.5rem;position:relative;overflow:hidden;}
+  .match-wrap::before{content:'';position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid var(--green);border-left:2px solid var(--green);opacity:0.4;}
+  .match-wrap::after{content:'';position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2px solid var(--green);border-right:2px solid var(--green);opacity:0.4;}
+  .match-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1rem;}
+  @media(max-width:600px){.match-cols{grid-template-columns:1fr;}}
+  .match-col-label{font-family:'Orbitron',monospace;font-size:0.58rem;letter-spacing:0.1em;color:rgba(0,255,136,0.4);margin-bottom:0.6rem;}
+  .match-left,.match-right{display:flex;flex-direction:column;gap:0.5rem;}
+  .match-item{padding:0.65rem 1rem;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:0.68rem;border:1px solid rgba(0,255,136,0.18);background:rgba(0,255,136,0.04);color:rgba(200,255,224,0.72);cursor:pointer;transition:all 0.2s;user-select:none;line-height:1.4;}
+  .match-item:hover{border-color:rgba(0,255,136,0.45);background:rgba(0,255,136,0.09);color:#c8ffe0;}
+  .match-item.selected{border-color:var(--green);background:rgba(0,255,136,0.12);color:var(--green);box-shadow:0 0 8px rgba(0,255,136,0.15);}
+  .match-item.matched-ok{border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.06);color:rgba(0,255,136,0.5);cursor:default;pointer-events:none;text-decoration:line-through;opacity:0.5;}
+  .match-item.matched-err{border-color:#ff5555;background:rgba(255,85,85,0.07);color:#ff7a7a;}
+  .match-right .match-item{font-family:'Rajdhani',sans-serif;font-size:0.82rem;}
+  .match-fb{font-family:'Share Tech Mono',monospace;font-size:0.72rem;padding:0.75rem 1rem;border-radius:3px;margin-top:0.75rem;display:none;}
+  .match-fb.ok{display:block;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.3);color:var(--green);}
+  .match-fb.err{display:block;background:rgba(255,85,85,0.06);border:1px solid rgba(255,85,85,0.25);color:#ff7a7a;}
+  /* Conexión visual entre pareja */
+  .match-pair{
+    display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;
+    background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:3px;overflow:hidden;
+  }
+  .mp-left{padding:0.55rem 0.9rem;font-family:'Orbitron',monospace;font-size:0.65rem;color:var(--green);font-weight:700;letter-spacing:0.03em;}
+  .mp-line{display:flex;align-items:center;gap:0;padding:0 0.25rem;}
+  .mp-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+  .mp-dash{flex:1;height:1px;background:linear-gradient(90deg,var(--green),rgba(0,255,136,0.4));min-width:20px;}
+  .mp-arrow{color:var(--green);font-size:0.8rem;flex-shrink:0;}
+  .mp-right{padding:0.55rem 0.9rem;font-family:'Rajdhani',sans-serif;font-size:0.82rem;color:rgba(200,255,224,0.65);border-left:1px solid rgba(0,255,136,0.15);}
+  .mod-nav{display:flex;justify-content:space-between;margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(0,255,136,0.12);}
+  .mod-nav a{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--green);color:var(--green);font-family:'Orbitron',monospace;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;padding:11px 22px;border-radius:3px;text-decoration:none;text-transform:uppercase;position:relative;overflow:hidden;transition:all 0.25s;}
+  .mod-nav a::before{content:'';position:absolute;inset:0;background:var(--green);transform:translateX(-101%);transition:transform 0.3s ease;z-index:0;}
+  .mod-nav a:hover::before{transform:translateX(0);}
+  .mod-nav a:hover{color:#020b06;box-shadow:0 0 20px rgba(0,255,136,0.3);}
+  .mod-nav a span,.mod-nav a i{position:relative;z-index:1;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mod-hero fade-up">
+  <div class="eyebrow">[MÓDULO_03] // PREVENCIÓN DE FILTRACIÓN DE DATOS</div>
+  <h1>PREVENCIÓN DE<br/><span class="glow">FILTRACIONES</span></h1>
+  <p class="sub">Control de acceso · Cifrado · Monitoreo · Firewall · Mínimo privilegio</p>
+  <div class="status-bar"><span class="status-dot"></span>MÓDULO ACTIVO<span style="color:rgba(0,255,136,0.2)">|</span>9 TÉCNICAS<span style="color:rgba(0,255,136,0.2)">|</span>2 ACTIVIDADES</div>
+</div>
+
+<div class="learn-grid fade-up delay-1">
+  <div class="learn-item"><i class="bi bi-funnel"></i>Qué es una filtración de datos a nivel real</div>
+  <div class="learn-item"><i class="bi bi-layers"></i>Los 3 estados en que los datos son vulnerables</div>
+  <div class="learn-item"><i class="bi bi-shield-check"></i>9 técnicas reales para prevenir fugas</div>
+  <div class="learn-item"><i class="bi bi-terminal"></i>Comandos Linux para proteger información</div>
+  <div class="learn-item"><i class="bi bi-activity"></i>Monitorear y controlar salidas de datos</div>
+</div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+</div>
+
+<div class="section-intro fade-up"><p class="eyebrow">// concepto base</p><h2>¿QUÉ ES UNA FILTRACIÓN DE DATOS?</h2></div>
+<div class="mod-card fade-up delay-1" style="margin-bottom:1.25rem;">
+  <p style="font-family:'Rajdhani',sans-serif;font-size:0.95rem;color:rgba(200,255,224,0.6);line-height:1.8;margin-bottom:1rem;">Una filtración de datos es la <strong style="color:#c8ffe0;">exposición o transferencia de información hacia un entorno no autorizado</strong>, ya sea por errores de configuración, fallas del sistema o acciones del usuario.</p>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:0.72rem;margin-bottom:1rem;padding:0.75rem 1rem;background:rgba(0,255,136,0.03);border-left:2px solid rgba(0,255,136,0.3);">
+    <div style="color:rgba(0,255,136,0.5);margin-bottom:0.4rem;">// ejemplo: filtración por mala configuración</div>
+    <div style="color:#ff5555;">chmod 777 archivo.txt &nbsp;<span style="color:rgba(200,255,224,0.2);"># permisos totalmente abiertos</span></div>
+    <div style="color:#ff5555;">scp archivo.txt externo@ip &nbsp;<span style="color:rgba(200,255,224,0.2);"># datos fuera del sistema</span></div>
+    <div style="color:rgba(255,200,0,0.7);margin-top:0.4rem;">⚠ el sistema ejecuta sin saber que es una filtración</div>
+  </div>
+  <div class="info-box warn"><i class="bi bi-exclamation-triangle-fill"></i><span><strong>Idea clave:</strong> la filtración no siempre es un ataque — muchas veces es resultado de mala configuración o descuido del usuario.</span></div>
+</div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span></div>
+</div>
+
+<div class="section-intro fade-up"><p class="eyebrow">// cuándo son vulnerables</p><h2>LOS 3 ESTADOS DE LOS DATOS</h2></div>
+<div class="estados-grid fade-up delay-1">
+  <div class="estado-card">
+    <div class="estado-icon">💾</div>
+    <div class="estado-title">EN REPOSO</div>
+    <div class="estado-desc">Almacenados en disco: archivos, bases de datos, backups. Si alguien accede al sistema o al disco, puede leer la información directamente.</div>
+    <div class="estado-cmd">chmod 600 archivo.txt<br/>gpg -c archivo.txt</div>
+  </div>
+  <div class="estado-card">
+    <div class="estado-icon">🌐</div>
+    <div class="estado-title">EN TRÁNSITO</div>
+    <div class="estado-desc">Viajando por la red entre computadoras. Un atacante puede interceptar los paquetes si no están cifrados.</div>
+    <div class="estado-cmd">ssh usuario@ip<br/>scp archivo usuario@ip</div>
+  </div>
+  <div class="estado-card">
+    <div class="estado-icon">⚙️</div>
+    <div class="estado-title">EN USO</div>
+    <div class="estado-desc">En memoria RAM mientras un programa se ejecuta. Malware o accesos indebidos pueden leer la memoria activa.</div>
+    <div class="estado-cmd">control de procesos<br/>restricción de usuarios</div>
+  </div>
+</div>
+<div class="info-box tip fade-up"><i class="bi bi-lightbulb-fill"></i><span>Proteger solo archivos no es suficiente — los datos son vulnerables en los tres estados simultáneamente.</span></div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span></div>
+</div>
+
+<div class="section-intro fade-up"><p class="eyebrow">// prevención completa</p><h2>9 TÉCNICAS — VOLTEA LAS TARJETAS</h2></div>
+<div class="flip-grid fade-up delay-1">
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_01]</div><div class="f-icon"><i class="bi bi-key-fill"></i></div><div class="f-title">CONTROL DE ACCESO ESTRICTO</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Permisos precisos para que solo usuarios autorizados accedan.<br/><br/><code style="color:var(--green)">chmod 600 archivo.txt</code><br/><code style="color:var(--green)">chmod 700 carpeta/</code></div><div class="b-note">→ crítico en sistemas compartidos</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_02]</div><div class="f-icon"><i class="bi bi-people-fill"></i></div><div class="f-title">CONTROL DE USUARIOS Y ROLES</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Administrar quién usa el sistema y qué privilegios tiene. Linux usa UID/GID — los permisos aplican al identificador numérico, no al nombre.<br/><br/><code style="color:var(--green)">sudo adduser alumno</code><br/><code style="color:var(--green)">sudo usermod -aG grupo usuario</code></div><div class="b-note">→ reduce privilegios innecesarios</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_03]</div><div class="f-icon"><i class="bi bi-lock-fill"></i></div><div class="f-title">CIFRADO DE DATOS</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Convierte datos en formato ilegible sin la clave.<br/><br/><code style="color:var(--green)">gpg -c archivo.txt</code><br/><code style="color:var(--green)">openssl enc -aes-256-cbc -in a.txt -out a.enc</code><br/><br/>Protege incluso si el archivo es robado.</div><div class="b-note">→ sin clave, el contenido es ilegible</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_04]</div><div class="f-icon"><i class="bi bi-wifi"></i></div><div class="f-title">SEGURIDAD EN RED</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Usar siempre protocolos cifrados.<br/><br/>✓ <code style="color:var(--green)">ssh usuario@ip</code><br/>✓ <code style="color:var(--green)">scp archivo usuario@ip</code><br/><br/>✗ ftp / telnet → texto plano, interceptable.</div><div class="b-note">→ nunca usar protocolos sin cifrado</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_05]</div><div class="f-icon"><i class="bi bi-journal-text"></i></div><div class="f-title">MONITOREO Y LOGS</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Registrar y analizar actividad para detectar anomalías.<br/><br/><code style="color:var(--green)">last</code> — historial sesiones<br/><code style="color:var(--green)">journalctl -xe</code><br/><code style="color:var(--green)">tail -f /var/log/auth.log</code></div><div class="b-note">→ detectar accesos no autorizados</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_06]</div><div class="f-icon"><i class="bi bi-shield-fill-x"></i></div><div class="f-title">CONTROL DE SALIDA</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Controlar cómo y hacia dónde salen los datos.<br/><br/><code style="color:var(--green)">sudo ufw enable</code><br/><code style="color:var(--green)">sudo ufw deny out 21</code><br/><code style="color:var(--green)">sudo ufw status</code></div><div class="b-note">→ bloquea canales de exfiltración</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_07]</div><div class="f-icon"><i class="bi bi-gear-fill"></i></div><div class="f-title">CONFIGURACIÓN SEGURA</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Desactivar servicios y puertos innecesarios.<br/><br/><code style="color:var(--green)">systemctl list-units --type=service</code><br/><code style="color:var(--green)">sudo systemctl stop servicio</code><br/><code style="color:var(--green)">sudo systemctl disable servicio</code></div><div class="b-note">→ reducir superficie de ataque</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_08]</div><div class="f-icon"><i class="bi bi-funnel-fill"></i></div><div class="f-title">MÍNIMO PRIVILEGIO</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Solo los permisos estrictamente necesarios.<br/><br/>✗ <code style="color:#ff5555">chmod 777</code> — acceso total a todos<br/>✓ <code style="color:var(--green)">chmod 600</code> — solo quien necesita<br/><br/>Más permisos = mayor riesgo de abuso.</div><div class="b-note">→ limita el daño en caso de filtración</div></div>
+    </div>
+  </div>
+  <div class="flip-card" onclick="this.classList.toggle('flipped')">
+    <div class="flip-inner">
+      <div class="flip-front"><div class="f-tag">[T_09]</div><div class="f-icon"><i class="bi bi-usb-drive-fill"></i></div><div class="f-title">CONTROL DE DISPOSITIVOS</div><div class="f-hint">[ clic ]</div></div>
+      <div class="flip-back"><div class="b-def">Restringir el uso de dispositivos externos como USB para evitar copia física de datos sin dejar rastro en la red.<br/><br/>La seguridad no es solo digital — también es física.</div><div class="b-note">→ políticas + deshabilitar puertos USB</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>
+</div>
+
+<div class="section-intro fade-up"><p class="eyebrow">// referencia</p><h2>COMANDOS POR CATEGORÍA</h2></div>
+<div class="mod-card fade-up delay-1" style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.5rem;">
+  <!-- T1: Control de acceso -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T1 — CONTROL DE ACCESO ESTRICTO · Restringe quién puede leer, escribir o ejecutar</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">ls</span> <span class="flg">-l</span>                               <span class="cm"># ver permisos de todos los archivos del directorio</span>
+<span class="cmd">chmod</span> <span class="val">600</span> archivo.txt                 <span class="cm"># solo dueño: leer y escribir — nadie más accede</span>
+<span class="cmd">chmod</span> <span class="val">700</span> carpeta/                     <span class="cm"># solo dueño puede entrar y ejecutar en la carpeta</span>
+<span class="cmd">chmod</span> <span class="val">400</span> clave.pem                    <span class="cm"># solo lectura para el dueño — ideal para llaves SSH</span></div>
+  </div>
+  <!-- T2: Control usuarios -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T2 — CONTROL DE USUARIOS Y ROLES · Gestiona identidades y privilegios del sistema</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">whoami</span>                               <span class="cm"># muestra el nombre del usuario activo</span>
+<span class="cmd">id</span>                                   <span class="cm"># muestra UID, GID y todos los grupos del usuario</span>
+<span class="cmd">sudo adduser</span> <span class="val">alumno</span>                  <span class="cm"># crea un usuario nuevo con contraseña</span>
+<span class="cmd">sudo usermod</span> <span class="flg">-aG</span> <span class="val">grupo usuario</span>      <span class="cm"># agrega usuario al grupo sin quitar los anteriores</span>
+<span class="cmd">sudo deluser</span> <span class="val">alumno</span>                  <span class="cm"># elimina un usuario del sistema</span>
+<span class="cmd">cat</span> /etc/group                       <span class="cm"># lista todos los grupos y sus miembros</span></div>
+  </div>
+  <!-- T3: Cifrado -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T3 — CIFRADO DE DATOS · Hace ilegible el contenido sin la clave correcta</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">gpg</span> <span class="flg">-c</span> archivo.txt                   <span class="cm"># cifra con contraseña — genera archivo.txt.gpg</span>
+<span class="cmd">gpg</span> <span class="flg">-d</span> archivo.txt.gpg               <span class="cm"># descifra e imprime el contenido en pantalla</span>
+<span class="cmd">openssl enc</span> <span class="flg">-aes-256-cbc</span> <span class="flg">-in</span> <span class="val">a.txt</span> <span class="flg">-out</span> <span class="val">a.enc</span>  <span class="cm"># cifrado AES-256 más robusto</span>
+<span class="cmd">openssl enc</span> <span class="flg">-d</span> <span class="flg">-aes-256-cbc</span> <span class="flg">-in</span> <span class="val">a.enc</span> <span class="flg">-out</span> <span class="val">a.txt</span>  <span class="cm"># descifrar con openssl</span></div>
+  </div>
+  <!-- T4: Seguridad en red -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T4 — SEGURIDAD EN RED · Proteger datos mientras viajan entre equipos</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">ssh</span> <span class="val">usuario@192.168.1.5</span>              <span class="cm"># conexión cifrada a otro equipo — sustituye a telnet</span>
+<span class="cmd">scp</span> archivo.txt <span class="val">usuario@ip:/ruta/</span>    <span class="cm"># transferencia cifrada — sustituye a ftp</span>
+<span class="cm"># ✗ EVITAR — protocolos que envían en texto plano:</span>
+<span class="cm"># ftp   → cualquiera en la red puede leer los datos</span>
+<span class="cm"># telnet → la contraseña viaja sin cifrar</span></div>
+  </div>
+  <!-- T5: Monitoreo -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T5 — MONITOREO Y LOGS · Registrar y analizar actividad para detectar anomalías</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">last</span>                                  <span class="cm"># historial completo de sesiones con IP y duración</span>
+<span class="cmd">journalctl</span> <span class="flg">-xe</span>                      <span class="cm"># eventos del sistema — errores, servicios, accesos</span>
+<span class="cmd">tail</span> <span class="flg">-f</span> /var/log/auth.log             <span class="cm"># intentos de autenticación en tiempo real</span>
+<span class="cmd">sudo apt install</span> <span class="val">auditd</span> <span class="flg">-y</span>           <span class="cm"># instalar daemon de auditoría avanzada</span>
+<span class="cmd">sudo auditctl</span> <span class="flg">-w</span> archivo.txt <span class="flg">-p</span> <span class="val">rwxa</span> <span class="flg">-k</span> <span class="val">monitoreo</span>  <span class="cm"># vigilar archivo completo</span>
+<span class="cmd">sudo ausearch</span> <span class="flg">-k</span> <span class="val">monitoreo</span>           <span class="cm"># ver eventos por etiqueta</span></div>
+  </div>
+  <!-- T6: Control de salida -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T6 — CONTROL DE SALIDA · Firewall para bloquear canales de exfiltración</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">sudo ufw enable</span>                      <span class="cm"># activar firewall — inicia con el sistema</span>
+<span class="cmd">sudo ufw deny out</span> <span class="val">21</span>                <span class="cm"># bloquear salida FTP (puerto 21) — inseguro</span>
+<span class="cmd">sudo ufw deny out</span> <span class="val">23</span>                <span class="cm"># bloquear salida Telnet (puerto 23) — inseguro</span>
+<span class="cmd">sudo ufw allow out</span> <span class="val">22</span>               <span class="cm"># permitir SSH (puerto 22) — cifrado y seguro</span>
+<span class="cmd">sudo ufw status verbose</span>              <span class="cm"># ver todas las reglas activas con detalle</span></div>
+  </div>
+  <!-- T7: Configuración segura -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T7 — CONFIGURACIÓN SEGURA · Desactivar lo que no se usa reduce la superficie de ataque</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">systemctl list-units</span> <span class="flg">--type=service</span> <span class="cm"># listar todos los servicios activos</span>
+<span class="cmd">sudo systemctl stop</span> <span class="val">apache2</span>          <span class="cm"># detener un servicio inmediatamente</span>
+<span class="cmd">sudo systemctl disable</span> <span class="val">apache2</span>       <span class="cm"># evitar que inicie automáticamente al arrancar</span>
+<span class="cmd">sudo ss</span> <span class="flg">-tlnp</span>                         <span class="cm"># ver puertos abiertos y qué proceso los usa</span>
+<span class="cm"># regla: si un servicio no se necesita → apágalo</span></div>
+  </div>
+  <!-- T8: Mínimo privilegio -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T8 — MÍNIMO PRIVILEGIO · Solo los permisos necesarios, nada más</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cm"># ✗ INSEGURO — acceso total a todos</span>
+<span class="cmd">chmod</span> <span class="val">777</span> archivo.txt                 <span class="cm"># cualquier usuario del sistema puede hacer todo</span>
+<span class="cm"># ✓ CORRECTO — solo quien necesita accede</span>
+<span class="cmd">chmod</span> <span class="val">600</span> secreto.txt                 <span class="cm"># datos sensibles: solo el dueño lee y escribe</span>
+<span class="cmd">chmod</span> <span class="val">640</span> config.txt                  <span class="cm"># dueño: leer+escribir / grupo: solo leer</span>
+<span class="cmd">chmod</span> <span class="val">750</span> script.sh                   <span class="cm"># dueño: todo / grupo: leer+ejecutar / otros: nada</span></div>
+  </div>
+  <!-- T9: Control dispositivos -->
+  <div>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.6rem;color:rgba(0,255,136,0.45);margin-bottom:0.35rem;">// T9 — CONTROL DE DISPOSITIVOS · Evitar copia física de datos a USB u otros medios</p>
+    <div class="code-block"><button class="copy-btn" onclick="cpCode(this)">[ copiar ]</button>
+<span class="cmd">lsblk</span>                                <span class="cm"># listar todos los dispositivos conectados al sistema</span>
+<span class="cmd">lsusb</span>                                <span class="cm"># ver dispositivos USB conectados actualmente</span>
+<span class="cm"># bloquear montaje automático de USB (política del sistema):</span>
+<span class="cmd">sudo systemctl mask</span> <span class="val">udisks2</span>          <span class="cm"># deshabilitar el gestor de discos USB</span>
+<span class="cm"># ver si se montó algún dispositivo externo recientemente:</span>
+<span class="cmd">cat</span> /var/log/syslog | <span class="cmd">grep</span> <span class="val">USB</span>       <span class="cm"># buscar eventos USB en el log del sistema</span></div>
+  </div>
+</div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M8 11V7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7V11" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/><circle cx="12" cy="16" r="1.5" fill="rgba(0,255,136,0.6)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span></div>
+</div>
+
+<div class="section-intro fade-up"><p class="eyebrow">// triada</p><h2>RELACIÓN CON LA TRIADA CIA</h2></div>
+<div class="cia-mini fade-up delay-1">
+  <div class="cia-mini-card"><div class="cia-mini-letter">C</div><div class="cia-mini-word">CONFIDENCIALIDAD</div><div class="cia-mini-desc">Evita el acceso no autorizado mediante permisos y cifrado.</div></div>
+  <div class="cia-mini-card"><div class="cia-mini-letter" style="color:#00ffcc;">I</div><div class="cia-mini-word">INTEGRIDAD</div><div class="cia-mini-desc">Evita modificaciones indebidas mediante auditoría y control de acceso.</div></div>
+  <div class="cia-mini-card"><div class="cia-mini-letter" style="color:#aaffdd;">A</div><div class="cia-mini-word">DISPONIBILIDAD</div><div class="cia-mini-desc">Mantiene acceso controlado — ni demasiado abierto ni restringido.</div></div>
+</div>
+
+<div class="icon-stream">
+  <div class="stream-track"><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4H21L14 12V19L10 21V12L3 4Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linejoin="round" fill="rgba(0,255,136,0.08)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.08)"/><path d="M9 12L11 14L15 10" stroke="rgba(0,255,136,0.8)" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 7C5.5 2.5 18.5 2.5 23 7" stroke="rgba(0,255,136,0.3)" stroke-width="1.5" stroke-linecap="round"/><path d="M4.5 10.5C7.5 7.5 16.5 7.5 19.5 10.5" stroke="rgba(0,255,136,0.4)" stroke-width="1.5" stroke-linecap="round"/><path d="M8 14C9.5 12.5 14.5 12.5 16 14" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="rgba(0,255,136,0.7)"/></svg></span><span class="stream-img"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="rgba(0,255,136,0.5)" stroke-width="1.5" fill="rgba(0,255,136,0.06)"/><circle cx="12" cy="12" r="3" stroke="rgba(0,255,136,0.7)" stroke-width="1.5" fill="rgba(0,255,136,0.15)"/></svg></span></div>
+</div>
+
+<!-- ACT 1 -->
+<div class="section-intro fade-up"><p class="eyebrow">// actividad 01</p><h2>TUTORIAL GUIADO — APLICANDO LAS TÉCNICAS</h2></div>
+<p style="font-family:'Rajdhani',sans-serif;font-size:0.9rem;color:rgba(200,255,224,0.42);margin-bottom:1.25rem;">Sigue cada paso: comando, explicación y resultado. Navega con los botones.</p>
+
+<div class="terminal-wrapper fade-up delay-1">
+  <div class="t-bar">
+    <span class="t-dot t-r"></span><span class="t-dot t-y"></span><span class="t-dot t-g"></span>
+    <span class="t-title">kali@cipherguard:~ — Tutorial: Prevención de Filtraciones en Linux</span>
+  </div>
+  <div class="t-step-bar">
+    <span class="s-dot active" id="sd0"></span><span class="s-dot" id="sd1"></span>
+    <span class="s-dot" id="sd2"></span><span class="s-dot" id="sd3"></span>
+    <span class="s-dot" id="sd4"></span><span class="s-dot" id="sd5"></span>
+    <span class="s-dot" id="sd6"></span><span class="s-dot" id="sd7"></span>
+    <span class="s-lbl" id="s-lbl">PASO 1 / 8</span>
+  </div>
+  <div class="t-body" id="act1-body"></div>
+  <div class="t-footer">
+    <button class="t-btn" id="btn-prev" onclick="a1Prev()" disabled><span>◀ ANTERIOR</span></button>
+    <button class="t-btn" id="btn-next" onclick="a1Next()"><span>SIGUIENTE ▶</span></button>
+    <button class="t-btn" onclick="a1Reset()" style="margin-left:auto;"><span>↺ REINICIAR</span></button>
+  </div>
+</div>
+
+<!-- ACT 2 — UNIR -->
+<div class="section-intro fade-up" style="margin-top:2.5rem;"><p class="eyebrow">// actividad 02</p><h2>UNE CADA TÉCNICA CON SU DESCRIPCIÓN</h2></div>
+<div class="mod-card fade-up delay-1" style="margin-bottom:1rem;">
+  <p style="font-family:'Orbitron',monospace;font-size:0.68rem;color:var(--green);margin-bottom:0.6rem;letter-spacing:0.05em;">// INSTRUCCIONES</p>
+  <p style="font-family:'Rajdhani',sans-serif;font-size:0.92rem;color:rgba(200,255,224,0.6);line-height:1.7;">Haz clic en una técnica del panel izquierdo, luego en su descripción correcta del panel derecho. Las parejas correctas quedarán conectadas y visibles debajo para que siempre veas qué uniste.</p>
+  <div class="info-box tip" style="margin-top:0.75rem;"><i class="bi bi-mouse2"></i><span>Clic en técnica (izquierda) → clic en descripción (derecha). Las conexiones correctas aparecen en el panel de resultados.</span></div>
+</div>
+
+<div class="match-wrap fade-up delay-2">
+  <!-- Panel de selección -->
+  <div class="match-cols">
+    <div>
+      <div class="match-col-label">// TÉCNICA — selecciona una</div>
+      <div class="match-left" id="match-left"></div>
+    </div>
+    <div>
+      <div class="match-col-label">// DESCRIPCIÓN — elige la correcta</div>
+      <div class="match-right" id="match-right"></div>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="match-fb" id="match-fb"></div>
+
+  <!-- Progreso -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.62rem;color:rgba(0,255,136,0.4);" id="match-progress">0 / 8 conectadas</div>
+    <button class="t-btn" onclick="resetMatch()"><span>↺ REINICIAR</span></button>
+  </div>
+
+  <!-- Conexiones realizadas — siempre visibles -->
+  <div id="match-done-wrap" style="display:none;margin-top:1.25rem;border-top:1px solid rgba(0,255,136,0.12);padding-top:1rem;">
+    <p style="font-family:'Orbitron',monospace;font-size:0.6rem;color:rgba(0,255,136,0.4);letter-spacing:0.1em;margin-bottom:0.75rem;">// CONEXIONES REALIZADAS</p>
+    <div id="match-done" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
+  </div>
+</div>
+
+<div class="conclusion fade-up">
+  <h3>[ RESUMEN DEL MÓDULO 03 ]</h3>
+  <ul>
+    <li>Una filtración ocurre cuando datos llegan a un entorno no autorizado — no siempre es un ataque</li>
+    <li>Los datos son vulnerables en 3 estados: reposo, tránsito y uso</li>
+    <li>El control de acceso estricto es la primera línea de defensa</li>
+    <li>El cifrado protege los datos incluso si son robados o copiados</li>
+    <li>Los logs y la auditoría permiten detectar intentos de filtración en tiempo real</li>
+    <li>El firewall controla qué puede salir del sistema y por qué canal</li>
+    <li>El principio de mínimo privilegio reduce el daño ante cualquier falla</li>
+  </ul>
+</div>
+
+<div class="mod-nav fade-up">
+  <a href="/modulo2"><i class="bi bi-arrow-left"></i> <span>MÓDULO 02</span></a>
+  <a href="/modulo4"><span>MÓDULO 04</span> <i class="bi bi-arrow-right"></i></a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function cpCode(btn){
+  const t=btn.parentElement.innerText.replace('[ copiar ]','').trim();
+  navigator.clipboard.writeText(t).then(()=>{btn.textContent='[ ✓ copiado ]';setTimeout(()=>btn.textContent='[ copiar ]',1600);});
+}
+
+const pasos=[
+  {title:'PASO 1 — Verificar identidad y permisos actuales',
+   cmd:'whoami && id && ls -l',
+   exp:'whoami muestra el usuario activo. id muestra UID, GID y grupos. ls -l muestra los permisos del directorio actual. Siempre es el primer paso — conocer tu identidad antes de aplicar políticas.',
+   out:'kali\nuid=1000(kali) gid=1000(kali) groups=1000(kali)\ntotal 4\n-rw-r--r-- 1 kali kali 40 Jan 15 datos.txt',
+   tip:'💡 Conocer tu identidad en el sistema es esencial antes de aplicar cualquier política de seguridad.'},
+  {title:'PASO 2 — Aplicar control de acceso estricto',
+   cmd:'chmod 600 datos.txt && ls -l datos.txt',
+   exp:'chmod 600 restringe el archivo exclusivamente al dueño: puede leer y escribir, nadie más tiene acceso. ls -l confirma el cambio. Primera técnica contra filtraciones en datos en reposo.',
+   out:'-rw------- 1 kali kali 40 Jan 15 datos.txt',
+   tip:'💡 600 = rw------- → dueño: leer+escribir / grupo: ninguno / otros: ninguno'},
+  {title:'PASO 3 — Crear usuario con privilegios limitados',
+   cmd:'sudo adduser practicante && sudo usermod -aG lectores practicante',
+   exp:'adduser crea un nuevo usuario. usermod -aG agrega al grupo "lectores" sin quitar grupos anteriores (-a = append). Cada usuario solo accede a lo que su rol permite — principio de mínimo privilegio.',
+   out:'Usuario practicante creado exitosamente.\nUsuario practicante agregado al grupo lectores.',
+   tip:'💡 Nunca dar acceso root a usuarios que no lo necesitan. Los roles definen qué puede hacer cada quien.'},
+  {title:'PASO 4 — Cifrar un archivo sensible con GPG',
+   cmd:'gpg -c datos.txt',
+   exp:'gpg -c cifra el archivo usando una contraseña que el sistema solicitará. El resultado es un archivo .gpg completamente ilegible sin la clave. Protege datos en reposo y en tránsito.',
+   out:'Enter passphrase: [****]\nRepeat passphrase: [****]\n→ datos.txt.gpg creado — contenido ilegible sin la clave correcta.',
+   tip:'✓ Aunque alguien copie datos.txt.gpg, no podrá leerlo. El cifrado protege incluso si el archivo es robado.'},
+  {title:'PASO 5 — Monitorear sesiones e intentos de acceso',
+   cmd:'last | head -5 && tail -f /var/log/auth.log',
+   exp:'last muestra las últimas sesiones del sistema con IP, fecha y duración. tail -f sigue el archivo auth.log en tiempo real mostrando cada intento de autenticación (éxito o fallo).',
+   out:'kali     pts/0   192.168.1.5   Wed Jan 15 10:42 - 11:30\nroot     tty1                  Wed Jan 15 09:00 - 09:15\n\nJan 15 10:43:12 kali sshd[1234]: Accepted password for kali from 192.168.1.5',
+   tip:'💡 Presiona Ctrl+C para detener tail -f. Úsalo para detectar accesos sospechosos en tiempo real.'},
+  {title:'PASO 6 — Configurar auditoría avanzada con auditd',
+   cmd:'sudo auditctl -w datos.txt -p rwxa -k proteccion',
+   exp:'-w especifica el archivo. -p rwxa monitorea lectura (r), escritura (w), ejecución (x) y cambios de atributos (a). -k proteccion es la etiqueta para filtrar eventos después con ausearch.',
+   out:'Regla añadida.\nVigilando datos.txt: lectura, escritura, ejecución y atributos de archivo.',
+   tip:'💡 Ahora cualquier acceso al archivo — incluso solo leerlo — quedará registrado en el log del sistema.'},
+  {title:'PASO 7 — Activar firewall y bloquear canales inseguros',
+   cmd:'sudo ufw enable\nsudo ufw deny out 21\nsudo ufw deny out 23',
+   exp:'ufw enable activa el firewall. deny out 21 bloquea salidas por FTP (puerto 21). deny out 23 bloquea Telnet (puerto 23). Ambos protocolos transmiten datos en texto plano — fácilmente interceptables.',
+   out:'Firewall activo y habilitado al arranque.\nRegla añadida: bloquear salida puerto 21 (FTP)\nRegla añadida: bloquear salida puerto 23 (Telnet)',
+   tip:'✓ Los datos ya no pueden salir por canales no cifrados. Solo SSH y SCP están permitidos.'},
+  {title:'PASO 8 — Verificar toda la configuración aplicada',
+   cmd:'sudo ufw status && sudo ausearch -k proteccion | tail -5 && last | head -3',
+   exp:'ufw status muestra todas las reglas del firewall. ausearch filtra el log de auditoría por la etiqueta "proteccion". last muestra las últimas sesiones. Este paso confirma que todo está funcionando.',
+   out:'Status: active\nDENY OUT 21/tcp\nDENY OUT 23/tcp\n\ntype=PATH name=datos.txt\nkali pts/0 192.168.1.5 Wed Jan 15',
+   tip:'✅ ¡Tutorial completado! Aplicaste 6 de las 9 técnicas de prevención de filtraciones en un flujo real.'}
+];
+
+let step=0;
+function a1Render(){
+  const p=pasos[step];
+  document.getElementById('act1-body').innerHTML=`
+    <div class="t-line t-info">[ ${step+1}/${pasos.length} ] ${p.title}</div>
+    <div class="t-line t-out">────────────────────────────────────────────────────────</div>
+    <div class="t-line" style="margin:0.5rem 0 0.25rem;color:rgba(200,255,224,0.48);font-family:'Rajdhani',sans-serif;font-size:0.86rem;">${p.exp}</div>
+    <div class="t-line" style="margin-top:0.6rem;"><span class="t-prompt">kali@cipherguard:~$</span><span style="color:rgba(200,255,224,0.9);"> ${p.cmd.replace(/\n/g,'<br/><span class="t-prompt" style="opacity:0.5;">   &gt;&gt;</span> ')}</span></div>
+    <div class="t-line t-ok" style="margin-top:0.35rem;">${p.out.replace(/\n/g,'<br/>&nbsp;&nbsp;')}</div>
+    <div class="t-line t-hint" style="margin-top:0.5rem;">${p.tip}</div>`;
+  for(let i=0;i<pasos.length;i++) document.getElementById('sd'+i).className='s-dot'+(i<step?' done':i===step?' active':'');
+  document.getElementById('s-lbl').textContent=`PASO ${step+1} / ${pasos.length}`;
+  document.getElementById('btn-prev').disabled=step===0;
+  document.getElementById('btn-next').innerHTML=step===pasos.length-1?'<span>✓ COMPLETADO</span>':'<span>SIGUIENTE ▶</span>';
+}
+function a1Next(){if(step<pasos.length-1){step++;a1Render();}}
+function a1Prev(){if(step>0){step--;a1Render();}}
+function a1Reset(){step=0;a1Render();}
+a1Render();
+
+/* MATCH */
+const PAIRS=[
+  {id:0,left:'Control de Acceso Estricto',  right:'Define permisos precisos para que solo usuarios autorizados puedan leer o modificar archivos del sistema.'},
+  {id:1,left:'Cifrado de Datos',             right:'Convierte la información en formato ilegible sin una clave — protege incluso si el archivo es robado o copiado.'},
+  {id:2,left:'Monitoreo y Logs',             right:'Registra y analiza la actividad del sistema para detectar comportamientos anómalos o accesos sospechosos.'},
+  {id:3,left:'Control de Salida (Firewall)', right:'Controla qué información puede salir del sistema, por qué puerto y hacia qué destino.'},
+  {id:4,left:'Seguridad en Red',             right:'Usa protocolos cifrados como SSH y SCP para proteger datos mientras viajan entre equipos por la red.'},
+  {id:5,left:'Mínimo Privilegio',            right:'Asigna solo los permisos estrictamente necesarios para cada tarea — reduce el daño en caso de error o ataque.'},
+  {id:6,left:'Control de Usuarios y Roles',  right:'Administra identidades del sistema mediante UID/GID para controlar quién accede a cada recurso.'},
+  {id:7,left:'Configuración Segura',         right:'Desactiva servicios innecesarios y cierra puertos sin uso para reducir la superficie de ataque del sistema.'},
+];
+
+let selectedLeft=null, matched=new Set();
+let rightOrder=[];
+
+function renderMatch(){
+  const L=document.getElementById('match-left'), R=document.getElementById('match-right');
+  L.innerHTML=''; R.innerHTML=''; selectedLeft=null;
+
+  // Solo mostrar los no conectados aún
+  PAIRS.filter(p=>!matched.has(p.id)).forEach(p=>{
+    const el=document.createElement('div');
+    el.className='match-item'; el.dataset.id=p.id;
+    el.textContent=p.left;
+    el.addEventListener('click',()=>selectLeft(p.id,el));
+    L.appendChild(el);
+  });
+
+  rightOrder.filter(p=>!matched.has(p.id)).forEach(p=>{
+    const el=document.createElement('div');
+    el.className='match-item'; el.dataset.id=p.id;
+    el.textContent=p.right;
+    el.addEventListener('click',()=>selectRight(p.id,el));
+    R.appendChild(el);
+  });
+
+  updateProgress();
+  updateDone();
+}
+
+function selectLeft(id,el){
+  document.querySelectorAll('#match-left .match-item').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedLeft=id;
+}
+
+function selectRight(id,el){
+  if(selectedLeft===null) return;
+  const fb=document.getElementById('match-fb');
+
+  if(selectedLeft===id){
+    // CORRECTO
+    matched.add(id);
+    fb.className='match-fb ok';
+    fb.textContent=`✓ Correcto — "${PAIRS[id].left}" conectado correctamente.`;
+    renderMatch();
+    if(matched.size===PAIRS.length){
+      setTimeout(()=>{
+        fb.textContent='✅ ¡Actividad completada! Uniste correctamente las 8 técnicas con sus descripciones.';
+      },300);
+    }
+  } else {
+    // INCORRECTO — parpadeo rojo sin revelar la respuesta
+    el.classList.add('matched-err');
+    const leftEl=document.querySelector(`#match-left .match-item[data-id="${selectedLeft}"]`);
+    if(leftEl) leftEl.classList.add('matched-err');
+    fb.className='match-fb err';
+    fb.textContent=`✗ Esa combinación no es correcta — intenta de nuevo.`;
+    setTimeout(()=>{
+      el.classList.remove('matched-err');
+      if(leftEl){leftEl.classList.remove('matched-err','selected');}
+      selectedLeft=null;
+    },900);
+  }
+}
+
+function updateProgress(){
+  const p=document.getElementById('match-progress');
+  p.textContent=`${matched.size} / ${PAIRS.length} conectadas`;
+  if(matched.size>0) p.style.color='var(--green)';
+}
+
+function updateDone(){
+  const wrap=document.getElementById('match-done-wrap');
+  const done=document.getElementById('match-done');
+  if(matched.size===0){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  done.innerHTML='';
+  // Mostrar en orden original las que ya están conectadas
+  PAIRS.filter(p=>matched.has(p.id)).forEach(p=>{
+    const row=document.createElement('div');
+    row.className='match-pair';
+    row.innerHTML=`
+      <div class="mp-left">${p.left}</div>
+      <div class="mp-line"><span class="mp-dot"></span><span class="mp-dash"></span><span class="mp-arrow">▶</span></div>
+      <div class="mp-right">${p.right}</div>`;
+    done.appendChild(row);
+  });
+}
+
+function resetMatch(){
+  matched=new Set(); selectedLeft=null;
+  rightOrder=[...PAIRS].sort(()=>Math.random()-0.5);
+  document.getElementById('match-fb').className='match-fb';
+  document.getElementById('match-progress').textContent='0 / 8 conectadas';
+  document.getElementById('match-progress').style.color='rgba(0,255,136,0.4)';
+  document.getElementById('match-done-wrap').style.display='none';
+  renderMatch();
+}
+
+rightOrder=[...PAIRS].sort(()=>Math.random()-0.5);
+renderMatch();
+</script>
+{% endblock %}
